@@ -40,8 +40,9 @@ class Ui_Form_mod(object):
     Form.setHtml("Initializing...")
     self.countdownTime = fotoboxCfg['countdown']
     self.entries = None
-    self.tplFooterOrg = "Fotobox 0.2 · © Florian Knodt · BitBastelei//Adlerweb · www.adlerweb.info"
+    self.tplFooterOrg = fotoboxCfg['footer']
     self.tplImage = "init.png"
+    self.tplImage2 = "dummy.jpg"
     self.tplFooter = self.tplFooterOrg
     self.tplInstruct = "Instruction placeholder"
     self.tplBtn1 = "Button 1"
@@ -101,6 +102,7 @@ class Ui_Form_mod(object):
     data = data.replace('${info}', self.tplInstruct, 1)
     data = data.replace('${status}', self.tplFooter, 1)
     data = data.replace('${image}', self.tplImage, 1)
+    data = data.replace('${image2}', self.tplImage2, 1)
     Form.setHtml(data, QUrl('file://'+os.path.dirname(os.path.realpath(__file__))+'/design/.'))
 
   def screenMain(self, Form):
@@ -207,6 +209,7 @@ class Ui_Form_mod(object):
 
   def doConfirm(self, Form):
     move(self.temp+self.lastPhoto, self.save+self.lastPhoto)
+    self.tplImage2 = self.save+self.lastPhoto
     print("Saved " + self.save+self.lastPhoto)
     self.screenMain(window)
 
