@@ -164,7 +164,7 @@ class Ui_Form_mod(object):
       #and the updated HTML will not be ready in time
       self.tplInstruct = fotoboxText['info-capture']
       self.tplImage = "capturing.png"
-      self.tplFooter = "Capturing..."
+      self.tplFooter = "Aufnahme..." #Capturing...
       self.updateHtml(Form)
       self.timerCnt.start(250)
     else:
@@ -190,8 +190,8 @@ class Ui_Form_mod(object):
     self.screen = 3
 
     self.tplInstruct = fotoboxText['info-review']
-    self.tplBtn1 = fotoboxText['btn-save']
-    self.tplBtn2 = fotoboxText['btn-recapture']
+    self.tplBtn1 = fotoboxText['btn-recapture']
+    self.tplBtn2 = fotoboxText['btn-save']
     self.tplBtn3 = fotoboxText['btn-cancel']
     self.tplImage = self.temp+self.lastPhoto
     self.tplFooter = "Foto: " + self.lastPhoto
@@ -214,7 +214,9 @@ class Ui_Form_mod(object):
     self.screenMain(window)
 
   def retry(self, Form):
-    self.tempDel()
+    move(self.temp+self.lastPhoto, self.save+self.lastPhoto)
+    self.tplImage2 = self.save+self.lastPhoto
+    print("Saved " + self.save+self.lastPhoto)
     self.screenCapture(window)
 
   def startViewer(self, Form):
@@ -234,7 +236,7 @@ class Ui_Form_mod(object):
     self.entries = list(self.entries)
 
     if(len(self.entries) > 0):
-      self.viewerIndex = 0
+      self.viewerIndex = (len(self.entries)-1) #0
       self.screenViewer(Form)
     else:
       print("No images to show")
@@ -270,7 +272,7 @@ class Ui_Form_mod(object):
     if(self.viewerIndex < (len(self.entries)-1)):
       self.viewerIndex += 1
     self.screenViewer(Form)
- 
+
 class QWebView_mod(QWebView):
   def __init__(self):
     super(QWebView, self).__init__()
@@ -284,13 +286,13 @@ class QWebView_mod(QWebView):
       GPIO.setmode(GPIO.BCM)
 
       GPIO.setup(17, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-      GPIO.setup(21, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+      GPIO.setup(27, GPIO.IN, pull_up_down=GPIO.PUD_UP)
       GPIO.setup(22, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
       self.btnC1 = GPIO.HIGH
       self.btnC2 = GPIO.HIGH
       self.btnC3 = GPIO.HIGH
-    
+
     #Key Poller
     self.timerKey = QTimer(self)
     self.timerKey.timeout.connect(self.buttonCheck)
@@ -303,15 +305,15 @@ class QWebView_mod(QWebView):
     if not fotoboxCfg['nopi']:
       if self.btnB == 0:
         if GPIO.input(17) != self.btnC1:
-          self.btnB =3
+          self.btnB = 3
           if GPIO.input(17) == GPIO.LOW:
             self.buttonPress(1)
           self.btnC1 = GPIO.input(17)
-        if GPIO.input(21) != self.btnC2:
+        if GPIO.input(27) != self.btnC2:
           self.btnB = 3
-          if GPIO.input(21) == GPIO.LOW:
+          if GPIO.input(27) == GPIO.LOW:
             self.buttonPress(2)
-          self.btnC2 = GPIO.input(21)
+          self.btnC2 = GPIO.input(27)
         if GPIO.input(22) != self.btnC3:
           self.btnB = 3
           if GPIO.input(22) == GPIO.LOW:
@@ -330,9 +332,9 @@ class QWebView_mod(QWebView):
         self.ui.startViewer(self)
     elif(self.ui.screen == 3):
       if(btn == 1):
-        self.ui.doConfirm(self)
-      elif(btn == 2):
         self.ui.retry(self)
+      elif(btn == 2):
+        self.ui.doConfirm(self)
       elif(btn == 3):
         self.ui.noConfirm(self)
     elif(self.ui.screen == 4):
@@ -352,6 +354,8 @@ class QWebView_mod(QWebView):
       self.buttonPress(2)
     elif e.key() == QtCore.Qt.Key_3:
       self.buttonPress(3)
+    elif e.key() == QtCore.Qt.Key_0:
+      os.system('sudo shutdown -h now')
 
 app = QApplication(sys.argv)
 window = QWebView_mod()
