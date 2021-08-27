@@ -67,6 +67,16 @@ class Ui_Form_mod(object):
     self.timerCnt = QTimer(Form)
     self.timerCnt.timeout.connect(self.updateCountdown)
     self.timerCnt.setSingleShot(True)
+    
+    #Timeout rewiew screen
+    self.tout1Cnt = QTimer(Form)
+    self.tout1Cnt.timeout.connect(self.timeout1)
+    self.tout1Cnt.setSingleShot(True)
+
+    #Timeout rewiew screen
+    self.tout2Cnt = QTimer(Form)
+    self.tout2Cnt.timeout.connect(self.timeout2)
+    self.tout2Cnt.setSingleShot(True)
 
     #Blank dummy image
     self.blankImage = QPixmap(1,1)
@@ -107,6 +117,9 @@ class Ui_Form_mod(object):
 
   def screenMain(self, Form):
     self.screen = 1
+    
+    self.tout1Cnt.stop()
+    self.tout2Cnt.stop()
 
     self.tplInstruct = fotoboxText['info-home']
     self.tplBtn1 = fotoboxText['btn-capture']
@@ -197,6 +210,13 @@ class Ui_Form_mod(object):
     self.tplFooter = "Foto: " + self.lastPhoto
 
     self.updateHtml(Form)
+    
+    #start timeout
+    self.tout1Cnt.start(fotoboxCfg['timeout1']*1000)
+
+  def timeout1(self):
+    Form = window
+    self.doConfirm(Form)
 
   def tempDel(self):
     if self.lastPhoto != "" and os.path.isfile(self.temp+self.lastPhoto):
@@ -204,16 +224,19 @@ class Ui_Form_mod(object):
       self.lastPhoto = ""
 
   def noConfirm(self, Form):
+    self.tout1Cnt.stop()
     self.tempDel()
     self.screenMain(window)
 
   def doConfirm(self, Form):
+    self.tout1Cnt.stop()
     move(self.temp+self.lastPhoto, self.save+self.lastPhoto)
     self.tplImage2 = self.save+self.lastPhoto
     print("Saved " + self.save+self.lastPhoto)
     self.screenMain(window)
 
   def retry(self, Form):
+    self.tout1Cnt.stop()
     move(self.temp+self.lastPhoto, self.save+self.lastPhoto)
     self.tplImage2 = self.save+self.lastPhoto
     print("Saved " + self.save+self.lastPhoto)
@@ -262,6 +285,13 @@ class Ui_Form_mod(object):
       " · " + str(os.path.basename(self.entries[self.viewerIndex][1]))
     
     self.updateHtml(Form)
+    
+    #start timeout
+    self.tout2Cnt.start(fotoboxCfg['timeout2']*1000)
+
+  def timeout2(self):
+    Form = window
+    self.screenMain(Form)
 
   def viewPrev(self, Form):
     if(self.viewerIndex > 0):
