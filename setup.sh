@@ -9,7 +9,7 @@ sudo apt update
 yes | sudo apt dist-upgrade
 
 echo "Installing prerequirements"
-yes | sudo apt install openbox xorg python3 python3-picamera python3-pyqt5 python3-pyqt5.qtwebkit lightdm python3-rpi.gpio git
+yes | sudo apt install openbox xorg python3 python3-picamera python3-pyqt5 python3-pyqt5.qtwebkit lightdm python3-rpi.gpio git unclutter
 # Suggested tools: sxiv tmux vim usbmount x11vnc
 
 echo "Installing Fotobox"
@@ -27,3 +27,5 @@ sudo raspi-config nonint do_boot_behaviour B4
 echo "Syncing..."
 sudo sync
 
+echo "Hide Curser"
+unclutter
