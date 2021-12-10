@@ -55,8 +55,12 @@ class Ui_Form_mod(object):
       self.tplFooterOrg = "Demo simulation mode"
 
   def initSystem(self, Form):
-    #Camera
+    #Camera + Button LED
     if not fotoboxCfg['nopi']:
+      GPIO.setmode(GPIO.BCM)
+      GPIO.setup(18, GPIO.OUT)
+      GPIO.setup(23, GPIO.OUT)
+      GPIO.setup(24, GPIO.OUT)
       self.camera = PiCamera()
       self.camera.hflip = fotoboxCfg['cam-c-hflip']
       if(fotoboxCfg['cam-p-hflip'] == fotoboxCfg['cam-c-hflip']):
@@ -68,12 +72,12 @@ class Ui_Form_mod(object):
     self.timerCnt.timeout.connect(self.updateCountdown)
     self.timerCnt.setSingleShot(True)
     
-    #Timeout rewiew screen
+    #Timeout review screen
     self.tout1Cnt = QTimer(Form)
     self.tout1Cnt.timeout.connect(self.timeout1)
     self.tout1Cnt.setSingleShot(True)
 
-    #Timeout rewiew screen
+    #Timeout viewer screen
     self.tout2Cnt = QTimer(Form)
     self.tout2Cnt.timeout.connect(self.timeout2)
     self.tout2Cnt.setSingleShot(True)
@@ -125,6 +129,10 @@ class Ui_Form_mod(object):
     self.tplBtn1 = fotoboxText['btn-capture']
     self.tplBtn2 = fotoboxText['btn-view']
     self.tplBtn3 = fotoboxText['btn-empty']
+    if not fotoboxCfg['nopi']:
+      GPIO.output(18, GPIO.HIGH)
+      GPIO.output(23, GPIO.HIGH)
+      GPIO.output(24, GPIO.LOW)
 
     if not self.isLive:
       self.tplImage = "liveBack.png"
@@ -143,6 +151,10 @@ class Ui_Form_mod(object):
     self.tplBtn1 = fotoboxText['btn-empty']
     self.tplBtn2 = fotoboxText['btn-empty']
     self.tplBtn3 = fotoboxText['btn-empty']
+    if not fotoboxCfg['nopi']:
+      GPIO.output(18, GPIO.LOW)
+      GPIO.output(23, GPIO.LOW)
+      GPIO.output(24, GPIO.LOW)
 
     if not self.isLive:
       self.tplImage = "liveBack.png"
@@ -206,6 +218,10 @@ class Ui_Form_mod(object):
     self.tplBtn1 = fotoboxText['btn-recapture']
     self.tplBtn2 = fotoboxText['btn-save']
     self.tplBtn3 = fotoboxText['btn-cancel']
+    if not fotoboxCfg['nopi']:
+      GPIO.output(18, GPIO.HIGH)
+      GPIO.output(23, GPIO.HIGH)
+      GPIO.output(24, GPIO.HIGH)
     self.tplImage = self.temp+self.lastPhoto
     self.tplFooter = "Foto: " + self.lastPhoto
 
@@ -220,7 +236,7 @@ class Ui_Form_mod(object):
 
   def tempDel(self):
     if self.lastPhoto != "" and os.path.isfile(self.temp+self.lastPhoto):
-      os.remove(self.temp+self.lastPhoto)
+      #os.remove(self.temp+self.lastPhoto)
       self.lastPhoto = ""
 
   def noConfirm(self, Form):
@@ -270,15 +286,25 @@ class Ui_Form_mod(object):
 
     if(self.viewerIndex < (len(self.entries)-1)):
       self.tplBtn1 = fotoboxText['btn-next']
+      if not fotoboxCfg['nopi']:
+        GPIO.output(18, GPIO.HIGH)
     else:
       self.tplBtn1 = fotoboxText['btn-empty']
+      if not fotoboxCfg['nopi']:
+        GPIO.output(18, GPIO.LOW)
     
     if(self.viewerIndex > 0):
       self.tplBtn2 = fotoboxText['btn-previous']
+      if not fotoboxCfg['nopi']:
+        GPIO.output(23, GPIO.HIGH)
     else:
       self.tplBtn2 = fotoboxText['btn-empty']
+      if not fotoboxCfg['nopi']:
+        GPIO.output(23, GPIO.LOW)
 
     self.tplBtn3 = fotoboxText['btn-back']
+    if not fotoboxCfg['nopi']:
+      GPIO.output(24, GPIO.HIGH)
     self.tplImage = self.entries[self.viewerIndex][1]
     self.tplFooter = "Foto " + str(self.viewerIndex+1) + \
       ' von ' + str(len(self.entries)) + \
