@@ -26,6 +26,12 @@ if not fotoboxCfg['nopi']:
   except ImportError:
     print("RPi GPIO not found - operating in simulation mode")
     fotoboxCfg['nopi']            = True
+  
+  try:
+    from rpi_hardware_pwm import HardwarePWM
+  except ImportError:
+    print("rpi-hardware-pwm not found - operating in simulation mode")
+    fotoboxCfg['nopi']            = True
 
 from shutil import copyfile, move
 from stat import S_ISREG, ST_MTIME, ST_MODE
@@ -58,6 +64,8 @@ class Ui_Form_mod(object):
     #Camera + Button LED
     if not fotoboxCfg['nopi']:
       GPIO.setmode(GPIO.BCM)
+      self.pwm = HardwarePWM(0, hz=600)
+      self.pwm.start(10)
       GPIO.setup(18, GPIO.OUT)
       GPIO.setup(23, GPIO.OUT)
       GPIO.setup(24, GPIO.OUT)
@@ -155,6 +163,7 @@ class Ui_Form_mod(object):
       GPIO.output(18, GPIO.LOW)
       GPIO.output(23, GPIO.LOW)
       GPIO.output(24, GPIO.LOW)
+      self.pwm.change_duty_cycle(50)
 
     if not self.isLive:
       self.tplImage = "liveBack.png"
@@ -204,8 +213,10 @@ class Ui_Form_mod(object):
 
     self.lastPhoto = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".jpg"
     if not fotoboxCfg['nopi']:
+      self.pwm.change_duty_cycle(100)
       self.camera.resolution = (fotoboxCfg['cam-c-width'], fotoboxCfg['cam-c-height'])
       self.camera.capture(self.temp+self.lastPhoto)
+      self.pwm.change_duty_cycle(10)
     else:
       copyfile(os.path.dirname(os.path.realpath(__file__)) + '/design/dummy.jpg', self.temp+self.lastPhoto)
 
@@ -236,7 +247,7 @@ class Ui_Form_mod(object):
 
   def tempDel(self):
     if self.lastPhoto != "" and os.path.isfile(self.temp+self.lastPhoto):
-      #os.remove(self.temp+self.lastPhoto)
+      os.remove(self.temp+self.lastPhoto)
       self.lastPhoto = ""
 
   def noConfirm(self, Form):
@@ -403,6 +414,8 @@ class QWebView_mod(QWebView):
 
   def keyPressEvent(self, e):
     if e.key() == QtCore.Qt.Key_Escape:
+      GPIO.cleanup()
+      self.ui.pwm.stop()
       self.close()
     elif e.key() == QtCore.Qt.Key_1:
       self.buttonPress(1)
