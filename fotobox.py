@@ -7,12 +7,10 @@ from config import fotoboxText, fotoboxCfg
 from datetime import datetime, date, time
 from time import sleep
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import QTime, QTimer, QUrl
-from PyQt5.QtGui import QIcon, QPixmap, QCursor
-from PyQt5.QtWidgets import QApplication, QDialog
+from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWebKitWidgets import QWebView
-from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow
 
 if not fotoboxCfg['nopi']:
   try:
@@ -64,11 +62,11 @@ class Ui_Form_mod(object):
     #Camera + Button LED
     if not fotoboxCfg['nopi']:
       GPIO.setmode(GPIO.BCM)
-      self.pwm = HardwarePWM(0, hz=600)
-      self.pwm.start(10)
       GPIO.setup(18, GPIO.OUT)
       GPIO.setup(23, GPIO.OUT)
       GPIO.setup(24, GPIO.OUT)
+      self.pwm = HardwarePWM(0, hz=1000)
+      self.pwm.start(10)
       self.camera = PiCamera()
       self.camera.hflip = fotoboxCfg['cam-c-hflip']
       if(fotoboxCfg['cam-p-hflip'] == fotoboxCfg['cam-c-hflip']):
@@ -89,9 +87,6 @@ class Ui_Form_mod(object):
     self.tout2Cnt = QTimer(Form)
     self.tout2Cnt.timeout.connect(self.timeout2)
     self.tout2Cnt.setSingleShot(True)
-
-    #Blank dummy image
-    self.blankImage = QPixmap(1,1)
 
     self.lastPhoto = ""
     self.screen = ""
@@ -262,7 +257,7 @@ class Ui_Form_mod(object):
     print("Saved " + self.save+self.lastPhoto)
     self.screenMain(window)
 
-  def retry(self, Form):
+  def another(self, Form):
     self.tout1Cnt.stop()
     move(self.temp+self.lastPhoto, self.save+self.lastPhoto)
     self.tplImage2 = self.save+self.lastPhoto
@@ -347,7 +342,6 @@ class QWebView_mod(QWebView):
     self.ui.setupUi(self)
     self.ui.initSystem(self)
     self.ui.screenMain(self)
-    self.setCursor(QtGui.QCursor(QtCore.Qt.BlankCursor))
 
     if not fotoboxCfg['nopi']:
       GPIO.setmode(GPIO.BCM)
@@ -399,7 +393,7 @@ class QWebView_mod(QWebView):
         self.ui.startViewer(self)
     elif(self.ui.screen == 3):
       if(btn == 1):
-        self.ui.retry(self)
+        self.ui.another(self)
       elif(btn == 2):
         self.ui.doConfirm(self)
       elif(btn == 3):
