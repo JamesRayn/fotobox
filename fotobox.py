@@ -3,14 +3,14 @@ import os
 import subprocess
 
 from config import fotoboxText, fotoboxCfg
+from layout import Ui_Form
 
-from datetime import datetime, date, time
-from time import sleep
+from datetime import datetime
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QTime, QTimer, QUrl
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtWebKitWidgets import QWebView
+from PyQt5.QtGui import QPixmap
+from PyQt5.QtWidgets import QApplication, QDialog
 
 if not fotoboxCfg['nopi']:
   try:
@@ -25,59 +25,54 @@ if not fotoboxCfg['nopi']:
     print("RPi GPIO not found - operating in simulation mode")
     fotoboxCfg['nopi']            = True
   
-  try:
-    from rpi_hardware_pwm import HardwarePWM
-  except ImportError:
-    print("rpi-hardware-pwm not found - operating in simulation mode")
-    fotoboxCfg['nopi']            = True
+  if fotoboxCfg['light-pwm']:
+    try:
+      from rpi_hardware_pwm import HardwarePWM
+    except ImportError:
+      print("RPi-Hardware-PWM not found - operating without foto light")
+      fotoboxCfg['light-pwm']     = False
 
 from shutil import copyfile, move
 from stat import S_ISREG, ST_MTIME, ST_MODE
 
-class Ui_Form_mod(object):
-  def setupUi(self, Form):
-    Form.setObjectName("Form")
-    Form.setWindowTitle("Fotobox")
-    Form.resize(fotoboxCfg['window-width'], fotoboxCfg['window-height'])
-    Form.setMinimumSize(QtCore.QSize(fotoboxCfg['window-width'], fotoboxCfg['window-height']))
-    Form.setMaximumSize(QtCore.QSize(fotoboxCfg['window-width'], fotoboxCfg['window-height']))
-    Form.setHtml("Initializing...")
-    self.countdownTime = fotoboxCfg['countdown']
-    self.entries = None
-    self.tplFooterOrg = fotoboxCfg['footer']
-    self.tplImage = "init.png"
+class Ui_Form_mod(Ui_Form):
+  def initSystem(self, Form):
+    #Blank dummy image
+    self.blankImage = QPixmap(1,1)
+    self.capturing = QPixmap(os.path.dirname(os.path.realpath(__file__)) + '/design/capturing.png').scaledToWidth(fotoboxCfg['cam-p-width'], QtCore.Qt.SmoothTransformation)
     self.tplImage2 = "dummy.jpg"
-    self.tplFooter = self.tplFooterOrg
-    self.tplInstruct = "Instruction placeholder"
-    self.tplBtn1 = "Button 1"
-    self.tplBtn2 = "Button 2"
-    self.tplBtn3 = "Button 3"
+    self.countdownTime = fotoboxCfg['countdown']
+    self.tplFooterOrg = fotoboxCfg['footer']
+    
     with open('design/template.html', 'r') as myfile:
       self.template=myfile.read().replace('\n', '')
 
     if fotoboxCfg['nopi']:
-      self.tplFooterOrg = "Demo simulation mode"
-
-  def initSystem(self, Form):
+      self.l_footer.setText("Demo simulation mode")
+    
+    self.updateBg()
+    
     #Camera + Button LED
     if not fotoboxCfg['nopi']:
       GPIO.setmode(GPIO.BCM)
       GPIO.setup(18, GPIO.OUT)
       GPIO.setup(23, GPIO.OUT)
       GPIO.setup(24, GPIO.OUT)
-      self.pwm = HardwarePWM(0, hz=1000)
-      self.pwm.start(10)
+      if fotoboxCfg['light-pwm']:
+        self.pwm = HardwarePWM(0, hz=1000)
+        self.pwm.start(10)
       self.camera = PiCamera()
       self.camera.hflip = fotoboxCfg['cam-c-hflip']
       if(fotoboxCfg['cam-p-hflip'] == fotoboxCfg['cam-c-hflip']):
         fotoboxCfg['cam-p-hflip'] = False
+      
     self.isLive = False
 
     #Countdown Updater
     self.timerCnt = QTimer(Form)
     self.timerCnt.timeout.connect(self.updateCountdown)
     self.timerCnt.setSingleShot(True)
-    
+
     #Timeout review screen
     self.tout1Cnt = QTimer(Form)
     self.tout1Cnt.timeout.connect(self.timeout1)
@@ -111,167 +106,167 @@ class Ui_Form_mod(object):
         print("Could not set up save path")
         self.tplFooterOrg = "Could not set up save path"
 
-  def updateHtml(self, Form):
-    data = self.template
-    data = data.replace('${btn1}', self.tplBtn1, 1)
-    data = data.replace('${btn2}', self.tplBtn2, 1)
-    data = data.replace('${btn3}', self.tplBtn3, 1)
-    data = data.replace('${info}', self.tplInstruct, 1)
-    data = data.replace('${status}', self.tplFooter, 1)
-    data = data.replace('${image}', self.tplImage, 1)
-    data = data.replace('${image2}', self.tplImage2, 1)
-    Form.setHtml(data, QUrl('file://'+os.path.dirname(os.path.realpath(__file__))+'/design/.'))
+  def patchDesign(self, Form):
+    Form.setWindowTitle("Fotobox")
+    Form.showFullScreen()
 
-  def screenMain(self, Form):
+  def updateBg(self):
+    data = self.template
+    data = data.replace('${LastPic}', self.tplImage2, 1)
+    self.bg_lastpic.setHtml(data, QUrl('file://'+os.path.dirname(os.path.realpath(__file__))+'/design/.'))
+
+  def screenMain(self):
     self.screen = 1
     
     self.tout1Cnt.stop()
     self.tout2Cnt.stop()
 
-    self.tplInstruct = fotoboxText['info-home']
-    self.tplBtn1 = fotoboxText['btn-capture']
-    self.tplBtn2 = fotoboxText['btn-view']
-    self.tplBtn3 = fotoboxText['btn-empty']
+    self.l_header.setHtml(fotoboxText['info-home'])
+    self.l_btn1.setText(fotoboxText['btn-capture'])
+    self.l_btn2.setText(fotoboxText['btn-view'])
+    self.l_btn3.setText(fotoboxText['btn-empty'])
     if not fotoboxCfg['nopi']:
       GPIO.output(18, GPIO.HIGH)
       GPIO.output(23, GPIO.HIGH)
       GPIO.output(24, GPIO.LOW)
 
     if not self.isLive:
-      self.tplImage = "liveBack.png"
+      self.l_image.hide()
+      self.l_image.setPixmap(self.blankImage)
       if not fotoboxCfg['nopi']:
         self.camera.start_preview(fullscreen=False, window = (fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height']), hflip=fotoboxCfg['cam-p-hflip'])
         print("Enabling camera preview")
       self.isLive = True
 
-    self.tplFooter = self.tplFooterOrg
+    self.l_footer.setText(self.tplFooterOrg)
 
-    self.updateHtml(Form)
-
-  def screenCapture(self, Form):
+  def screenCapture(self):
     self.screen = 2
 
-    self.tplBtn1 = fotoboxText['btn-empty']
-    self.tplBtn2 = fotoboxText['btn-empty']
-    self.tplBtn3 = fotoboxText['btn-empty']
+    self.l_btn1.setText(fotoboxText['btn-empty'])
+    self.l_btn2.setText(fotoboxText['btn-empty'])
+    self.l_btn3.setText(fotoboxText['btn-empty'])
     if not fotoboxCfg['nopi']:
       GPIO.output(18, GPIO.LOW)
       GPIO.output(23, GPIO.LOW)
       GPIO.output(24, GPIO.LOW)
-      self.pwm.change_duty_cycle(50)
+      if fotoboxCfg['light-pwm']:
+        self.pwm.change_duty_cycle(60)
 
     if not self.isLive:
-      self.tplImage = "liveBack.png"
+      self.l_image.hide()
+      self.l_image.setPixmap(self.blankImage)
       if not fotoboxCfg['nopi']:
         self.camera.start_preview(fullscreen=False, window = (fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height']), hflip=fotoboxCfg['cam-p-hflip'])
         print("Enabling camera preview")
       self.isLive = True
 
-    self.tplFooter = self.tplFooterOrg
-
-    self.updateHtml(Form)
+    self.l_footer.setText(self.tplFooterOrg)
 
     #start countdown
-    self.countdownTime = fotoboxCfg['countdown']
+    self.countdownTime = fotoboxCfg['countdown'] + 1
     self.updateCountdown()
 
   def updateCountdown(self):
-    Form = window
-
-    self.tplInstruct = fotoboxText['info-count']
-    self.tplInstruct = self.tplInstruct.replace('${countdown}', str(self.countdownTime), 1)
-    self.updateHtml(Form)
+    if self.countdownTime == fotoboxCfg['countdown'] + 1:
+      self.l_header.setHtml(fotoboxText['info-count'])
 
     self.countdownTime-=1
 
     if(self.countdownTime > 0):
+      self.l_countdown.setText(str(self.countdownTime))
       self.timerCnt.start(1000)
-    elif self.countdownTime == 0:
+    elif self.countdownTime == 1:
+      self.l_countdown.setText(str(self.countdownTime))
       self.timerCnt.start(750)
-    elif self.countdownTime == -1:
+    elif self.countdownTime == 0:
       #We already switch it here because photoTake seems to freeze the GPU briefly
-      #and the updated HTML will not be ready in time
-      self.tplInstruct = fotoboxText['info-capture']
-      self.tplImage = "capturing.png"
-      self.tplFooter = "Aufnahme..." #Capturing...
-      self.updateHtml(Form)
+      #and the updated Qt will not be ready in time
+      self.l_countdown.setText("")								  
+      self.l_header.setHtml(fotoboxText['info-capture'])
+      self.l_image.setPixmap(self.capturing)
+      self.l_image.show()
+      self.l_footer.setText("Aufnahme...")
       self.timerCnt.start(250)
     else:
-      self.photoTake(Form)
+      self.photoTake()
 
-  def photoTake(self, Form):
+  def photoTake(self):
     if(self.isLive):
-      self.isLive=False
       if not fotoboxCfg['nopi']:
         self.camera.stop_preview()
         print("Disabling camera preview")
+      self.l_image.show()
+      self.isLive=False
 
     self.lastPhoto = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".jpg"
     if not fotoboxCfg['nopi']:
-      self.pwm.change_duty_cycle(100)
+      if fotoboxCfg['light-pwm']:
+        self.pwm.change_duty_cycle(100)
       self.camera.resolution = (fotoboxCfg['cam-c-width'], fotoboxCfg['cam-c-height'])
       self.camera.capture(self.temp+self.lastPhoto)
-      self.pwm.change_duty_cycle(10)
+      if fotoboxCfg['light-pwm']:
+        self.pwm.change_duty_cycle(10)
     else:
       copyfile(os.path.dirname(os.path.realpath(__file__)) + '/design/dummy.jpg', self.temp+self.lastPhoto)
 
-    self.screenReview(Form)
+    self.screenReview()
 
-  def screenReview(self, Form):
+  def screenReview(self):
     self.screen = 3
 
-    self.tplInstruct = fotoboxText['info-review']
-    self.tplBtn1 = fotoboxText['btn-recapture']
-    self.tplBtn2 = fotoboxText['btn-save']
-    self.tplBtn3 = fotoboxText['btn-cancel']
+    self.l_header.setHtml(fotoboxText['info-review'])
+    self.l_btn1.setText(fotoboxText['btn-recapture'])
+    self.l_btn2.setText(fotoboxText['btn-save'])
+    self.l_btn3.setText(fotoboxText['btn-cancel'])
     if not fotoboxCfg['nopi']:
       GPIO.output(18, GPIO.HIGH)
       GPIO.output(23, GPIO.HIGH)
       GPIO.output(24, GPIO.HIGH)
-    self.tplImage = self.temp+self.lastPhoto
-    self.tplFooter = "Foto: " + self.lastPhoto
-
-    self.updateHtml(Form)
+    pixmap = QPixmap(self.temp+self.lastPhoto)
+    self.l_image.setPixmap(pixmap.scaledToWidth(fotoboxCfg['cam-p-width'], QtCore.Qt.SmoothTransformation))
+    self.l_footer.setText("Foto: " + self.lastPhoto)
     
     #start timeout
     self.tout1Cnt.start(fotoboxCfg['timeout1']*1000)
 
   def timeout1(self):
-    Form = window
-    self.doConfirm(Form)
+    self.doConfirm()
 
   def tempDel(self):
     if self.lastPhoto != "" and os.path.isfile(self.temp+self.lastPhoto):
       os.remove(self.temp+self.lastPhoto)
       self.lastPhoto = ""
 
-  def noConfirm(self, Form):
+  def noConfirm(self):
     self.tout1Cnt.stop()
     self.tempDel()
-    self.screenMain(window)
+    self.screenMain()
 
-  def doConfirm(self, Form):
+  def doConfirm(self):
     self.tout1Cnt.stop()
     move(self.temp+self.lastPhoto, self.save+self.lastPhoto)
     self.tplImage2 = self.save+self.lastPhoto
+    self.updateBg()
     print("Saved " + self.save+self.lastPhoto)
-    self.screenMain(window)
+    self.screenMain()
 
-  def another(self, Form):
+  def another(self):
     self.tout1Cnt.stop()
     move(self.temp+self.lastPhoto, self.save+self.lastPhoto)
     self.tplImage2 = self.save+self.lastPhoto
+    self.updateBg()
     print("Saved " + self.save+self.lastPhoto)
-    self.screenCapture(window)
+    self.screenCapture()
 
-  def startViewer(self, Form):
+  def startViewer(self):
     self.screen = 4
 
     if(self.isLive):
-      self.isLive=False
-      self.tplImage = "init.png"
       if not fotoboxCfg['nopi']:
         self.camera.stop_preview()
+      self.l_image.show()
+      self.isLive=False
 
     self.entries = None
     self.entries = (os.path.join(self.save, fn) for fn in os.listdir(self.save))
@@ -282,66 +277,65 @@ class Ui_Form_mod(object):
 
     if(len(self.entries) > 0):
       self.viewerIndex = (len(self.entries)-1) #0
-      self.screenViewer(Form)
+      self.screenViewer()
     else:
       print("No images to show")
-      self.screenMain(Form)
+      self.screenMain()
 
-  def screenViewer(self, Form):
-    self.tplInstruct = fotoboxText['info-view']
+  def screenViewer(self):
+    self.l_header.setHtml(fotoboxText['info-view'])
 
     if(self.viewerIndex < (len(self.entries)-1)):
-      self.tplBtn1 = fotoboxText['btn-next']
+      self.l_btn1.setText(fotoboxText['btn-next'])
       if not fotoboxCfg['nopi']:
         GPIO.output(18, GPIO.HIGH)
     else:
-      self.tplBtn1 = fotoboxText['btn-empty']
+      self.l_btn1.setText(fotoboxText['btn-empty'])
       if not fotoboxCfg['nopi']:
         GPIO.output(18, GPIO.LOW)
     
     if(self.viewerIndex > 0):
-      self.tplBtn2 = fotoboxText['btn-previous']
+      self.l_btn2.setText(fotoboxText['btn-previous'])
       if not fotoboxCfg['nopi']:
         GPIO.output(23, GPIO.HIGH)
     else:
-      self.tplBtn2 = fotoboxText['btn-empty']
+      self.l_btn2.setText(fotoboxText['btn-empty'])
       if not fotoboxCfg['nopi']:
         GPIO.output(23, GPIO.LOW)
 
-    self.tplBtn3 = fotoboxText['btn-back']
+    self.l_btn3.setText(fotoboxText['btn-back'])
     if not fotoboxCfg['nopi']:
       GPIO.output(24, GPIO.HIGH)
-    self.tplImage = self.entries[self.viewerIndex][1]
-    self.tplFooter = "Foto " + str(self.viewerIndex+1) + \
+    pixmap = QPixmap(str(self.entries[self.viewerIndex][1]))
+    self.l_image.setPixmap(pixmap.scaledToWidth(fotoboxCfg['cam-p-width'], QtCore.Qt.SmoothTransformation))
+    self.l_footer.setText("Foto " + str(self.viewerIndex+1) + \
       ' von ' + str(len(self.entries)) + \
-      " · " + str(os.path.basename(self.entries[self.viewerIndex][1]))
-    
-    self.updateHtml(Form)
+      " · " + str(os.path.basename(self.entries[self.viewerIndex][1])))
     
     #start timeout
     self.tout2Cnt.start(fotoboxCfg['timeout2']*1000)
 
   def timeout2(self):
-    Form = window
-    self.screenMain(Form)
+    self.screenMain()
 
-  def viewPrev(self, Form):
+  def viewPrev(self):
     if(self.viewerIndex > 0):
       self.viewerIndex -= 1
-    self.screenViewer(Form)
+    self.screenViewer()
 
-  def viewNext(self, Form):
+  def viewNext(self):
     if(self.viewerIndex < (len(self.entries)-1)):
       self.viewerIndex += 1
-    self.screenViewer(Form)
+    self.screenViewer()
 
-class QWebView_mod(QWebView):
+class QDialog_mod(QDialog):
   def __init__(self):
-    super(QWebView, self).__init__()
+    super(QDialog, self).__init__()
     self.ui = Ui_Form_mod()
     self.ui.setupUi(self)
     self.ui.initSystem(self)
-    self.ui.screenMain(self)
+    self.ui.patchDesign(self)
+    self.ui.screenMain()
 
     if not fotoboxCfg['nopi']:
       GPIO.setmode(GPIO.BCM)
@@ -360,7 +354,7 @@ class QWebView_mod(QWebView):
     self.timerKey.start(25)
     self.btnB  = 1
 
-    self.showFullScreen()
+    self.show()
 
   def buttonCheck(self):
     if not fotoboxCfg['nopi']:
@@ -388,28 +382,30 @@ class QWebView_mod(QWebView):
     print("Button Event: " + str(btn))
     if(self.ui.screen == 1):
       if(btn == 1):
-        self.ui.screenCapture(self)
+        self.ui.screenCapture()
       elif(btn == 2):
-        self.ui.startViewer(self)
+        self.ui.startViewer()
     elif(self.ui.screen == 3):
       if(btn == 1):
-        self.ui.another(self)
+        self.ui.another()
       elif(btn == 2):
-        self.ui.doConfirm(self)
+        self.ui.doConfirm()
       elif(btn == 3):
-        self.ui.noConfirm(self)
+        self.ui.noConfirm()
     elif(self.ui.screen == 4):
       if(btn == 1):
-        self.ui.viewNext(self)
+        self.ui.viewNext()
       elif(btn == 2):
-        self.ui.viewPrev(self)
+        self.ui.viewPrev()
       elif(btn == 3):
-        self.ui.screenMain(self)
+        self.ui.screenMain()
 
   def keyPressEvent(self, e):
     if e.key() == QtCore.Qt.Key_Escape:
-      GPIO.cleanup()
-      self.ui.pwm.stop()
+      if not fotoboxCfg['nopi']:
+        GPIO.cleanup()
+        if fotoboxCfg['light-pwm']:
+          self.ui.pwm.stop()
       self.close()
     elif e.key() == QtCore.Qt.Key_1:
       self.buttonPress(1)
@@ -421,6 +417,6 @@ class QWebView_mod(QWebView):
       os.system('sudo shutdown -h now')
 
 app = QApplication(sys.argv)
-window = QWebView_mod()
+window = QDialog_mod()
 
 sys.exit(app.exec_())
