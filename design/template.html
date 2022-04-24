@@ -1,134 +1,25 @@
 <!doctype html>
-<html lang="de">
+<html>
 <head>
-	<meta charset="utf-8"/>
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Fotobox</title>
 </head>
-
-<body
-	style="
-		padding: 0;
-		margin: 0;
-		font-family: 'Kalam', sans-serif;
-		line-height: 1.2
-	">
-	
+<body style="padding: 0; margin: 0;">
 	<div id="fotobox" style="width: 1280px; height: 1024px; background-image: url('backdrop.png');"></div>
 
-		<div
-			id="Infobox"
-			style="
-				position: fixed;
-				left: 50px;
-				top: 15px;
-				width: 860px;
-				height: 115px;
-				font-size: 33px;
-				text-align: center;
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				overflow: hidden;
-		">
-			${info}
-		</div>
-
-		<nav>
-			<div
-				id="Button1"
-				style="
-					position: fixed;
-					right: 15px;
-					top: 550px;
-					width: 295px;
-					height: 97px;
-					font-size: 45px;
-					text-align: right;
-					display: flex;
-					align-items: center;
-					justify-content: flex-end;
-					overflow: hidden;
-			">
-				${btn1}
-			</div>
-
-			<div
-				id="Button2"
-				style="
-					position: fixed;
-					right: 15px;
-					top: 700px;
-					width: 295px;
-					height: 97px;
-					font-size: 45px;
-					text-align: right;
-					display: flex;
-					align-items: center;
-					justify-content: flex-end;
-					overflow: hidden;
-			">
-				${btn2}
-			</div>
-
-			<div
-				id="Button3"
-				style="
-					position: fixed;
-					right: 15px;
-					top: 850px;
-					width: 295px;
-					height: 97px;
-					font-size: 45px;
-					text-align: right;
-					display: flex;
-					align-items: center;
-					justify-content: flex-end;
-					overflow: hidden;
-			">
-				${btn3}
-			</div>
-		</nav>
-
-		<img src="${image}" style="width: 906px; height: 680px; background-image: url('init.png'); position: fixed; left: 28px; top: 205px;" />
-
-			<div
-				id="LastPic"
-				style="
-					position: fixed;
-					right: -35px;
-					top: 5px;
-					-moz-transform: rotate(15deg);
-					-ms-transform: rotate(15deg);
-					-o-transform: rotate(15deg);
-					-webkit-transform: rotate(15deg);
-					transform: rotate(15deg);
-			">
-				<img src="picframe.png" height="303" width="350" >
-				<img src="${image2}" style="width: 320px; height: 240px; position: fixed; left: 12px; top: 13px;" />
-			</div>
-
-
-		<footer>
-			<div
-				id="Footer"
-				style="
-					position: fixed;
-					left: 28px;
-					bottom: 30px;
-					width: 906px;
-					height: 93px;
-					font-size: 33px;
-					text-align: center;
-					color: #7a7a7a;
-					display: flex;
-					align-items: center;
-					justify-content: center;
-					overflow: hidden;
-			">
-				${status}
-			</div>
-		</footer>
-
+	<div
+		id="LastPic"
+		style="
+			position: fixed;
+			right: -35px;
+			top: 5px;
+			-moz-transform: rotate(15deg);
+			-ms-transform: rotate(15deg);
+			-o-transform: rotate(15deg);
+			-webkit-transform: rotate(15deg);
+			transform: rotate(15deg);
+	">
+		<img src="picframe.png" height="303" width="350" >
+		<img src="${LastPic}" style="width: 320px; height: 240px; position: fixed; left: 12px; top: 13px;" />
+	</div>
 </body>
 </html>
