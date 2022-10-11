@@ -11,12 +11,17 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QTime, QTimer, QUrl
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QApplication, QDialog
+from PyQt5.QtWebKitWidgets import QWebView
+
+from PIL import Image
 
 if not fotoboxCfg['nopi']:
   try:
-    from picamera import PiCamera
+    from libcamera import Transform
+    from picamera2 import Picamera2
+    from picamera2.previews.qt import QGlPicamera2
   except ImportError:
-    print("PiCamera not found - operating in simulation mode")
+    print("PiCamera2 or libcamera not found - operating in simulation mode")
     fotoboxCfg['nopi']            = True
   
   try:
@@ -39,19 +44,14 @@ class Ui_Form_mod(Ui_Form):
   def initSystem(self, Form):
     #Blank dummy image
     self.blankImage = QPixmap(1,1)
-    self.capturing = QPixmap(os.path.dirname(os.path.realpath(__file__)) + '/design/capturing.png').scaledToWidth(fotoboxCfg['cam-p-width'], QtCore.Qt.SmoothTransformation)
-    self.tplImage2 = "dummy.jpg"
+    self.waiting = QPixmap(os.path.dirname(os.path.realpath(__file__)) + '/design/waiting.png').scaledToWidth(fotoboxCfg['cam-p-width'], QtCore.Qt.SmoothTransformation)
+    self.l_lastpic.setPixmap(QPixmap(os.path.dirname(os.path.realpath(__file__)) + '/design/dummy.jpg').scaledToWidth(320, QtCore.Qt.SmoothTransformation))
     self.countdownTime = fotoboxCfg['countdown']
     self.tplFooterOrg = fotoboxCfg['footer']
-    
-    with open('design/template.html', 'r') as myfile:
-      self.template=myfile.read().replace('\n', '')
 
     if fotoboxCfg['nopi']:
       self.l_footer.setText("Demo simulation mode")
-    
-    self.updateBg()
-    
+
     #Camera + Button LED
     if not fotoboxCfg['nopi']:
       GPIO.setmode(GPIO.BCM)
@@ -61,11 +61,26 @@ class Ui_Form_mod(Ui_Form):
       if fotoboxCfg['light-pwm']:
         self.pwm = HardwarePWM(0, hz=1000)
         self.pwm.start(10)
-      self.camera = PiCamera()
-      self.camera.hflip = fotoboxCfg['cam-c-hflip']
-      if(fotoboxCfg['cam-p-hflip'] == fotoboxCfg['cam-c-hflip']):
+
+      self.camera = Picamera2()
+      if fotoboxCfg['cam-p-hflip'] == fotoboxCfg['cam-c-hflip']:
         fotoboxCfg['cam-p-hflip'] = False
-      
+      elif fotoboxCfg['cam-c-hflip']:
+        if not fotoboxCfg['cam-p-hflip']:
+          fotoboxCfg['cam-p-hflip'] = True
+      if fotoboxCfg['cam-vflip']:
+        fotoboxCfg['cam-c-hflip'] = not fotoboxCfg['cam-c-hflip']
+
+      main_stream = {}
+      lores_stream = {"size": (fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height'])}
+      self.my_config = self.camera.create_still_configuration(main_stream, lores_stream, display="lores", buffer_count=2, transform=Transform(hflip=fotoboxCfg['cam-c-hflip'], vflip=fotoboxCfg['cam-vflip']))
+
+      self.camera.configure(self.my_config)
+      self.qpicamera2 = QGlPicamera2(self.camera, width=fotoboxCfg['cam-p-width'], height=fotoboxCfg['cam-p-height'], keep_ar=False, transform=Transform(hflip=fotoboxCfg['cam-p-hflip']))
+      self.camera.start()
+      self.w_mainpic_lay.addWidget(self.qpicamera2)
+      self.qpicamera2.setVisible(False)
+
     self.isLive = False
 
     #Countdown Updater
@@ -75,12 +90,12 @@ class Ui_Form_mod(Ui_Form):
 
     #Timeout review screen
     self.tout1Cnt = QTimer(Form)
-    self.tout1Cnt.timeout.connect(self.timeout1)
+    self.tout1Cnt.timeout.connect(self.doConfirm)
     self.tout1Cnt.setSingleShot(True)
 
     #Timeout viewer screen
     self.tout2Cnt = QTimer(Form)
-    self.tout2Cnt.timeout.connect(self.timeout2)
+    self.tout2Cnt.timeout.connect(self.screenMain)
     self.tout2Cnt.setSingleShot(True)
 
     self.lastPhoto = ""
@@ -110,14 +125,9 @@ class Ui_Form_mod(Ui_Form):
     Form.setWindowTitle("Fotobox")
     Form.showFullScreen()
 
-  def updateBg(self):
-    data = self.template
-    data = data.replace('${LastPic}', self.tplImage2, 1)
-    self.bg_lastpic.setHtml(data, QUrl('file://'+os.path.dirname(os.path.realpath(__file__))+'/design/.'))
-
   def screenMain(self):
     self.screen = 1
-    
+
     self.tout1Cnt.stop()
     self.tout2Cnt.stop()
 
@@ -131,10 +141,10 @@ class Ui_Form_mod(Ui_Form):
       GPIO.output(24, GPIO.LOW)
 
     if not self.isLive:
-      self.l_image.hide()
-      self.l_image.setPixmap(self.blankImage)
+      self.l_mainpic.setVisible(False)
+      self.l_mainpic.setPixmap(self.blankImage)
       if not fotoboxCfg['nopi']:
-        self.camera.start_preview(fullscreen=False, window = (fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height']), hflip=fotoboxCfg['cam-p-hflip'])
+        self.qpicamera2.setVisible(True)
         print("Enabling camera preview")
       self.isLive = True
 
@@ -154,10 +164,10 @@ class Ui_Form_mod(Ui_Form):
         self.pwm.change_duty_cycle(60)
 
     if not self.isLive:
-      self.l_image.hide()
-      self.l_image.setPixmap(self.blankImage)
+      self.l_mainpic.setVisible(False)
+      self.l_mainpic.setPixmap(self.blankImage)
       if not fotoboxCfg['nopi']:
-        self.camera.start_preview(fullscreen=False, window = (fotoboxCfg['cam-p-x'], fotoboxCfg['cam-p-y'], fotoboxCfg['cam-p-width'], fotoboxCfg['cam-p-height']), hflip=fotoboxCfg['cam-p-hflip'])
+        self.qpicamera2.setVisible(True)
         print("Enabling camera preview")
       self.isLive = True
 
@@ -165,46 +175,49 @@ class Ui_Form_mod(Ui_Form):
 
     #start countdown
     self.countdownTime = fotoboxCfg['countdown'] + 1
+
     self.updateCountdown()
 
   def updateCountdown(self):
+
     if self.countdownTime == fotoboxCfg['countdown'] + 1:
       self.l_header.setHtml(fotoboxText['info-count'])
 
+
     self.countdownTime-=1
 
-    if(self.countdownTime > 0):
+    if(self.countdownTime > 1):
       self.l_countdown.setText(str(self.countdownTime))
       self.timerCnt.start(1000)
     elif self.countdownTime == 1:
-      self.l_countdown.setText(str(self.countdownTime))
-      self.timerCnt.start(750)
-    elif self.countdownTime == 0:
-      #We already switch it here because photoTake seems to freeze the GPU briefly
-      #and the updated Qt will not be ready in time
-      self.l_countdown.setText("")								  
       self.l_header.setHtml(fotoboxText['info-capture'])
-      self.l_image.setPixmap(self.capturing)
-      self.l_image.show()
-      self.l_footer.setText("Aufnahme...")
-      self.timerCnt.start(250)
+      self.l_countdown.setText(str(self.countdownTime))
+      if fotoboxCfg['light-pwm']:
+        self.pwm.change_duty_cycle(100)
+      self.timerCnt.start(1000)
+    elif self.countdownTime == 0:
+
+      self.l_countdown.setText("")
+      if(self.isLive):
+        if not fotoboxCfg['nopi']:
+          self.qpicamera2.setVisible(False)
+          print("Disabling camera preview", datetime.now())
+        self.l_mainpic.setVisible(True)
+        self.isLive=False
+        self.l_header.setHtml(fotoboxText['info-wait'])
+        self.l_mainpic.setPixmap(self.waiting)
+        self.l_footer.setText("verarbeite...")
+      self.timerCnt.start(1)
     else:
       self.photoTake()
 
   def photoTake(self):
-    if(self.isLive):
-      if not fotoboxCfg['nopi']:
-        self.camera.stop_preview()
-        print("Disabling camera preview")
-      self.l_image.show()
-      self.isLive=False
 
     self.lastPhoto = datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".jpg"
+    print("take picture", datetime.now())
     if not fotoboxCfg['nopi']:
-      if fotoboxCfg['light-pwm']:
-        self.pwm.change_duty_cycle(100)
-      self.camera.resolution = (fotoboxCfg['cam-c-width'], fotoboxCfg['cam-c-height'])
-      self.camera.capture(self.temp+self.lastPhoto)
+      self.camera.capture_file(self.temp+self.lastPhoto)
+
       if fotoboxCfg['light-pwm']:
         self.pwm.change_duty_cycle(10)
     else:
@@ -215,6 +228,7 @@ class Ui_Form_mod(Ui_Form):
   def screenReview(self):
     self.screen = 3
 
+    print("screenReview", datetime.now())
     self.l_header.setHtml(fotoboxText['info-review'])
     self.l_btn1.setText(fotoboxText['btn-recapture'])
     self.l_btn2.setText(fotoboxText['btn-save'])
@@ -223,15 +237,13 @@ class Ui_Form_mod(Ui_Form):
       GPIO.output(18, GPIO.HIGH)
       GPIO.output(23, GPIO.HIGH)
       GPIO.output(24, GPIO.HIGH)
-    pixmap = QPixmap(self.temp+self.lastPhoto)
-    self.l_image.setPixmap(pixmap.scaledToWidth(fotoboxCfg['cam-p-width'], QtCore.Qt.SmoothTransformation))
+    self.lastpic = QPixmap(self.temp+self.lastPhoto)
+    self.l_mainpic.setPixmap(self.lastpic.scaledToWidth(fotoboxCfg['cam-p-width'], QtCore.Qt.SmoothTransformation))
     self.l_footer.setText("Foto: " + self.lastPhoto)
+    self.lastpic = self.lastpic.scaledToWidth(320, QtCore.Qt.SmoothTransformation)
     
     #start timeout
     self.tout1Cnt.start(fotoboxCfg['timeout1']*1000)
-
-  def timeout1(self):
-    self.doConfirm()
 
   def tempDel(self):
     if self.lastPhoto != "" and os.path.isfile(self.temp+self.lastPhoto):
@@ -247,7 +259,7 @@ class Ui_Form_mod(Ui_Form):
     self.tout1Cnt.stop()
     move(self.temp+self.lastPhoto, self.save+self.lastPhoto)
     self.tplImage2 = self.save+self.lastPhoto
-    self.updateBg()
+    self.l_lastpic.setPixmap(self.lastpic)
     print("Saved " + self.save+self.lastPhoto)
     self.screenMain()
 
@@ -255,7 +267,7 @@ class Ui_Form_mod(Ui_Form):
     self.tout1Cnt.stop()
     move(self.temp+self.lastPhoto, self.save+self.lastPhoto)
     self.tplImage2 = self.save+self.lastPhoto
-    self.updateBg()
+    self.l_lastpic.setPixmap(self.lastpic)
     print("Saved " + self.save+self.lastPhoto)
     self.screenCapture()
 
@@ -264,8 +276,8 @@ class Ui_Form_mod(Ui_Form):
 
     if(self.isLive):
       if not fotoboxCfg['nopi']:
-        self.camera.stop_preview()
-      self.l_image.show()
+        self.qpicamera2.setVisible(False)
+      self.l_mainpic.setVisible(True)
       self.isLive=False
 
     self.entries = None
@@ -307,16 +319,13 @@ class Ui_Form_mod(Ui_Form):
     if not fotoboxCfg['nopi']:
       GPIO.output(24, GPIO.HIGH)
     pixmap = QPixmap(str(self.entries[self.viewerIndex][1]))
-    self.l_image.setPixmap(pixmap.scaledToWidth(fotoboxCfg['cam-p-width'], QtCore.Qt.SmoothTransformation))
+    self.l_mainpic.setPixmap(pixmap.scaledToWidth(fotoboxCfg['cam-p-width'], QtCore.Qt.SmoothTransformation))
     self.l_footer.setText("Foto " + str(self.viewerIndex+1) + \
       ' von ' + str(len(self.entries)) + \
       " · " + str(os.path.basename(self.entries[self.viewerIndex][1])))
     
     #start timeout
     self.tout2Cnt.start(fotoboxCfg['timeout2']*1000)
-
-  def timeout2(self):
-    self.screenMain()
 
   def viewPrev(self):
     if(self.viewerIndex > 0):
@@ -354,7 +363,8 @@ class QDialog_mod(QDialog):
     self.timerKey.start(25)
     self.btnB  = 1
 
-    self.show()
+    #self.showFullScreen()
+    self.setVisible(True)
 
   def buttonCheck(self):
     if not fotoboxCfg['nopi']:
@@ -379,7 +389,7 @@ class QDialog_mod(QDialog):
 
   #keyHandling
   def buttonPress(self, btn):
-    print("Button Event: " + str(btn))
+    print("Button Event: " + str(btn), datetime.now())
     if(self.ui.screen == 1):
       if(btn == 1):
         self.ui.screenCapture()
