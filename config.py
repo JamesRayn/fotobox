@@ -1,31 +1,38 @@
 fotoboxCfg = {}
 
+# Footer text
 fotoboxCfg['footer']          = 'Fotoboxparty'
 
-fotoboxCfg['window-width']    = 1280
-fotoboxCfg['window-height']   = 1024
+# Screen settings
+## all layout and resolution settings are located at layout.py
 
-# Depending on the camera used previews might got smaller than set here
+# Common camera settings
+fotoboxCfg['cam-vflip']       = False # False = normal operation, True = camera upside down mounting
+
+# Camera preview settings
 fotoboxCfg['cam-p-width']     = 906
 fotoboxCfg['cam-p-height']    = 680
 fotoboxCfg['cam-p-x']         = 28
 fotoboxCfg['cam-p-y']         = 205
-fotoboxCfg['cam-p-hflip']     = True # False = Like a camera, True = Like a mirror
+fotoboxCfg['cam-p-hflip']     = True  # False = Like a camera, True = Like a mirror
 
-# PiCam v1: 2592x1944, v2: 3280x2464, HQ: 4056x3040 (need more VRAM), HQ (2x2 Binning): 2028x1520
-fotoboxCfg['cam-c-width']     = 3280
-fotoboxCfg['cam-c-height']    = 2464
+# Camera image settings
+###fotoboxCfg['cam-c-res']       = ''    # default empty = full resolution, otherwise enter '"size": (2028, 1520)'
 fotoboxCfg['cam-c-hflip']     = False # False = Like a camera, True = Like a mirror
 
-fotoboxCfg['nopi']            = False # True = Skip rasperry specific modules
-fotoboxCfg['light-pwm']       = True # True = Uses the RPi-Hardware-PWM Lib to control a foto light, False = No foto light
+# Hardware settings
+fotoboxCfg['nopi']            = False # True = Skip raspberry specific modules
+fotoboxCfg['light-pwm']       = True  # True = Uses the RPi-Hardware-PWM Lib to control a foto light, False = No foto light
 
+# File settings
 fotoboxCfg['temp']            = '/tmp/fotobox/'
 fotoboxCfg['save']            = '/home/pi/ubergallery/gallery-images'
 
-fotoboxCfg['countdown']       = 3   # Seconds countdown to take the picture
-fotoboxCfg['timeout1']        = 60  # Seconds timeout on the review screen
+# Timing settings
+fotoboxCfg['countdown']       = 4   # Seconds countdown to take the picture
+fotoboxCfg['timeout1']        = 45  # Seconds timeout on the review screen
 fotoboxCfg['timeout2']        = 180 # Seconds timeout on the viewer screen
+
 
 fotoboxText = {}
 
@@ -40,7 +47,7 @@ fotoboxText['info-review']    = fotoboxText['defbody'] + '<span style="font-size
 fotoboxText['info-view']      = fotoboxText['defbody'] + '<span style="font-size: 28px">Hier kannst du dir die Fotos der Veranstaltung direkt anschauen. Mit "Nächstes" und "Vorheriges" kannst du zwischen den Bildern wechseln. Mit "Zurück" geht\'s wieder zur Kamera.</span></body>'
 
 fotoboxText['btn-capture']    = 'Aufnahme ▶'
-fotoboxText['btn-view']       = 'Gallerie ▶'
+fotoboxText['btn-view']       = 'Galerie ▶'
 fotoboxText['btn-recapture']  = '<span style="font-size: 37px">Gleich nochmal</span> ▶'
 fotoboxText['btn-save']       = 'Fertig ▶'
 fotoboxText['btn-cancel']     = 'Löschen ▶'

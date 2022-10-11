@@ -1,46 +1,66 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtGui import QPainter #, QPixmap
 from PyQt5.QtWebKitWidgets import QWebView
+#import os
 
 
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.resize(1280, 1024)
+        Form.setStyleSheet("QWidget#Form {background-image: url(design/backdrop.png);}")
 
+        # Header label
         self.l_header = QWebView(Form)
         self.l_header.setGeometry(50, 15, 860, 115)
-        self.l_header.setStyleSheet("background:transparent")
+        self.l_header.setStyleSheet("background: transparent")
         self.l_header.setObjectName("l_header")
 
+        # MainPic viewer
+        self.l_mainpic = QtWidgets.QLabel()
+        self.l_mainpic.setObjectName("l_mainpic")
 
-        #self.l_header = QtWidgets.QLabel(Form)
-        #self.l_header.setGeometry(50, 15, 860, 115)
-        #self.l_header.setFont(font)
-        #self.l_header.setAlignment(QtCore.Qt.AlignCenter)
-        #self.l_header.setWordWrap(True)
-        #self.l_header.setObjectName("l_header")
+        self.w_mainpic = QtWidgets.QWidget(Form)
+        self.w_mainpic.setGeometry(28, 205, 906, 680)
+        self.w_mainpic.setObjectName("w_mainpic")
 
-        # zur Positionierung benötigt
-        self.p_mountpoint = QtWidgets.QWidget(Form)
-        self.p_mountpoint.setGeometry(28, 205, 906, 680)
-        self.p_mountpoint.setObjectName("p_mountpoint")
+        self.w_mainpic_lay = QtWidgets.QGridLayout(self.w_mainpic)
+        self.w_mainpic_lay.setContentsMargins(0, 0, 0, 0)
+        self.w_mainpic_lay.setObjectName("w_mainpic_lay")
+        self.w_mainpic_lay.addWidget(self.l_mainpic)#, 0, 0, 1, 1)
 
-        # mount point für Kamera und Bildbetrachter
-        self.w_viewpoint = QtWidgets.QGridLayout(self.p_mountpoint)
-        self.w_viewpoint.setContentsMargins(0, 0, 0, 0)
-        self.w_viewpoint.setObjectName("w_viewpoint")
+        # LastPic viewer
+        self.w_picframe = QtWidgets.QWidget()
+        self.w_picframe.setGeometry(0, 0, 350, 303)
+        self.w_picframe.setStyleSheet("QWidget#w_picframe {background: transparent; background-image: url(design/picframe-s.png);}")
+        self.w_picframe.setObjectName("w_picframe")
 
-        # Bildbetrachter
-        self.l_image = QtWidgets.QLabel(self.p_mountpoint)
-        self.l_image.setObjectName("l_image")
+        self.l_lastpic = QtWidgets.QLabel(self.w_picframe)
+        self.l_lastpic.setGeometry(12, 13, 320, 240)
+        self.l_lastpic.setObjectName("l_lastpic")
 
-        self.w_viewpoint.addWidget(self.l_image, 0, 0, 1, 1)
+        self.w_proxy = QtWidgets.QGraphicsProxyWidget()
+        self.w_proxy.setWidget(self.w_picframe)
+        self.w_proxy.setTransformOriginPoint(self.w_proxy.boundingRect().center())
+        self.w_proxy.setRotation(15)
+        self.w_graphicsview = QtWidgets.QGraphicsView()
+        self.w_graphicsview.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
+        self.w_graphicsview.setStyleSheet("border-style: none;")
+        self.w_scene = QtWidgets.QGraphicsScene(self.w_graphicsview)
+        self.w_scene.addItem(self.w_proxy)
+        self.w_graphicsview.setScene(self.w_scene)
 
-        # Hintergrund + letztem Bild
-        self.bg_lastpic = QWebView(Form)
-        self.bg_lastpic.setGeometry(0, 0, 1280, 1024)
-        self.bg_lastpic.setObjectName("bg_lastpic")
+        self.w_lastpic = QtWidgets.QWidget(Form)
+        self.w_lastpic.setGeometry(934, -30, 417, 388) # x starting next to MainPic
+        self.w_lastpic.setStyleSheet("background: transparent")
+        self.w_lastpic.setObjectName("w_lastpic")
 
+        self.w_lastpic_lay = QtWidgets.QGridLayout(self.w_lastpic)
+        self.w_lastpic_lay.setContentsMargins(0, 0, 0, 0)
+        self.w_lastpic_lay.setObjectName("w_lastpic_lay")
+        self.w_lastpic_lay.addWidget(self.w_graphicsview)
+
+        # Countdown label
         font = QtGui.QFont()
         font.setFamily("Kalam")
         font.setPixelSize(115)
@@ -52,6 +72,7 @@ class Ui_Form(object):
         self.l_countdown.setAlignment(QtCore.Qt.AlignCenter)
         self.l_countdown.setObjectName("l_countdown")
 
+        # Button labels
         font = QtGui.QFont()
         font.setFamily("Kalam")
         font.setPixelSize(45)
@@ -74,6 +95,7 @@ class Ui_Form(object):
         self.l_btn3.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter)
         self.l_btn3.setObjectName("l_btn3")
 
+        # Footer label
         font = QtGui.QFont()
         font.setFamily("Kalam")
         font.setPixelSize(33)
@@ -86,25 +108,29 @@ class Ui_Form(object):
         self.l_footer.setWordWrap(True)
         self.l_footer.setObjectName("l_footer")
 
-        # Ebenensortierung
-        self.bg_lastpic.raise_()
+        # Layer order
         self.l_header.raise_()
         self.l_countdown.raise_()
         self.l_btn1.raise_()
         self.l_btn2.raise_()
         self.l_btn3.raise_()
         self.l_footer.raise_()
-        self.p_mountpoint.raise_()
+        self.w_mainpic.raise_()
+        self.w_lastpic.raise_()
 
         self.retranslateUi(Form)
 
 
     def retranslateUi(self, Form):
         Form.setWindowTitle("Fotobox UI")
-        #self.l_header.setText("Willkommen an der Fotobox")
-        self.l_header.setHtml("Willkommen an der Fotobox")
-        self.bg_lastpic.setHtml("<body style=\"background-color: #bed4ed;\"><div id=\"LastPic\" style=\"position: fixed; right: 50px; top: 50px; transform: rotate(15deg);\">LastPic</div>"
-            "<div id=\"MainPic\" style=\"position: fixed; left: 450px; top: 500px;\">MainPic</div></body>")
+        self.l_header.setHtml("<center><h1>UI-Test an der Fotobox</h1></center>")
+        self.l_mainpic.setText("                              MainPic")
+        self.l_lastpic.setText("                              LastPic")
+        
+        #pixmap = QPixmap(os.path.dirname(os.path.realpath(__file__)) + '/design/dummy.jpg')
+        #self.l_lastpic.setPixmap(pixmap.scaledToWidth(320, QtCore.Qt.SmoothTransformation))
+        #self.l_mainpic.setPixmap(pixmap.scaledToWidth(906, QtCore.Qt.SmoothTransformation))
+        
         self.l_btn1.setText("Button 1 ▶")
         self.l_btn2.setText("Button 2 ▶")
         self.l_btn3.setText("Button 3 ▶")
